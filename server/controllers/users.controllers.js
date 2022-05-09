@@ -17,6 +17,9 @@ const getAllUsers = catchAsync(async (req, res, next) => {
     where: {
       status: "active",
     },
+    attributes: {
+      exclude: ["password"],
+    },
   });
 
   res.status(200).json({
@@ -30,9 +33,13 @@ const createUser = catchAsync(async (req, res, next) => {
 
   const randomNumber = Math.floor(Math.random() * (1000000 - 99999)) + 99999;
 
+  const genSalt = await bcrypt.genSalt(12);
+
+  const hashedPassword = await bcrypt.hash(password, genSalt);
+
   const newUser = await User.create({
     name,
-    password,
+    password: hashedPassword,
     accountNumber: randomNumber,
   });
 
@@ -51,6 +58,9 @@ const loginUser = catchAsync(async (req, res, next) => {
       accountNumber,
       status: "active",
     },
+    attributes: {
+      exclude: ["password"],
+    },
   });
 
   if (!user) {
@@ -60,8 +70,6 @@ const loginUser = catchAsync(async (req, res, next) => {
   if (user.password !== password) {
     return next(new AppError(403, "Credentials invalid"));
   }
-
-  user.password = undefined;
 
   res.status(200).json({
     status: "success",
